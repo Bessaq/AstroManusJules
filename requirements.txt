@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+kerykeion==4.26.0
+svgwrite
+geopy
+timezonefinder
+pytz
+requests
+
+# For SVG to PNG conversion
+cairosvg>=2.7.0
+Pillow>=10.0.0
+# pycairo is often a system-level dependency or automatically handled by cairosvg install
+pydantic-settings>=2.0.0
