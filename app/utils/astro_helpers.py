@@ -149,81 +149,31 @@ def create_subject(data: Union[NatalChartRequest, TransitRequest, Dict], default
 
     # Extract zodiac_type and sidereal_mode from data
     if isinstance(data, dict):
-        zodiac_type = data.get('zodiac_type', "Tropic")
-        sidereal_mode = data.get('sidereal_mode', None) # Corresponds to ayanamsa_mode
-        # perspective_type = data.get('perspective_type', "Apparent Geocentric") # If needed by constructor
+        zodiac_type = data.get("zodiac_type", "Tropic")
+        sidereal_mode = data.get("sidereal_mode")
+        perspective_type = data.get("perspective_type", "Apparent Geocentric")
     else:
-        zodiac_type = getattr(data, 'zodiac_type', "Tropic")
-        sidereal_mode = getattr(data, 'sidereal_mode', None) # Corresponds to ayanamsa_mode
-        # perspective_type = getattr(data, 'perspective_type', "Apparent Geocentric") # If needed
+        zodiac_type = getattr(data, "zodiac_type", "Tropic")
+        sidereal_mode = getattr(data, "sidereal_mode", None)
+        perspective_type = getattr(data, "perspective_type", "Apparent Geocentric")
 
     # The all_location_details_explicitly_provided logic and subject_params dictionary are less critical
     # if we pass parameters directly, and geonames_username/online are not used.
 
     try:
-        # Parameters for Kerykeion v4 AstrologicalSubject constructor based on guide:
-        # name, year, month, day, hour, minute, lat, lon, tz_str
-        # houses_system (code), zodiac_type (string), ayanamsa_mode (string)
-        # perspective_type is usually a global setting or not per subject in K4 core.
-
         print(f"Attempting K4 AstrologicalSubject constructor for: {name or default_name}")
-        constructor_args = {
-            "name": name or default_name,
-            "year": year, "month": month, "day": day,
-            "hour": hour, "minute": minute,
-            "lat": latitude, "lon": longitude, # Kerykeion usually uses 'lon'
-            "tz_str": tz_str,
-            "house_system": house_system_code, # Pass the code like "P"
-            "zodiac_type": zodiac_type,
-            "ayanamsa_mode": sidereal_mode # Pass sidereal_mode as ayanamsa_mode
-            # "perspective": perspective_type # If guide confirms this is a K4 constructor param
-        }
-
-        # Filter out None values for optional Kerykeion constructor params like ayanamsa_mode
-        final_constructor_args = {k: v for k, v in constructor_args.items() if v is not None or k not in ["ayanamsa_mode"]}
-        # Ensure ayanamsa_mode is only passed if it's not None. Other params are mostly required.
-        # A more explicit way for Kerykeion's typical constructor:
 
         k_subject = AstrologicalSubject(
-            constructor_args["name"],
-            constructor_args["year"], constructor_args["month"], constructor_args["day"],
-            constructor_args["hour"], constructor_args["minute"],
-            constructor_args["lat"], constructor_args["lon"], # lng to lon
-            constructor_args["tz_str"],
-            house_system_code, # Direct param for houses_system
-            zodiac_type=constructor_args["zodiac_type"],
-            ayanamsa_mode=constructor_args["ayanamsa_mode"] if constructor_args["ayanamsa_mode"] else "Lahiri" # Kerykeion might need a default if sidereal
-            # If zodiac_type is "Sidereal" but ayanamsa_mode is None, Kerykeion might default or error.
-            # Common Kerykeion behavior: if zodiac_type is Sidereal, ayanamsa_mode is required.
-            # Defaulting to "Lahiri" if sidereal_mode is None but zodiac is Sidereal could be one strategy.
-            # However, request model for NatalChartRequest has sidereal_mode as Optional[str]=None.
-            # Let's ensure ayanamsa_mode is only passed if zodiac_type is "Sidereal".
+            name or default_name,
+            year, month, day, hour, minute,
+            lng=longitude,
+            lat=latitude,
+            tz_str=tz_str,
+            houses_system_identifier=house_system_code,
+            zodiac_type=zodiac_type,
+            sidereal_mode=sidereal_mode if zodiac_type.lower() == "sidereal" else None,
+            perspective_type=perspective_type,
         )
-
-        # Refined call based on typical Kerykeion structure:
-        if zodiac_type.lower() == "sidereal":
-            if not sidereal_mode: # If sidereal but no mode, default to Lahiri or raise error
-                # For now, let Kerykeion handle default or error if ayanamsa_mode is None for sidereal.
-                # Or explicitly default: sidereal_mode_to_pass = sidereal_mode or "Lahiri"
-                sidereal_mode_to_pass = sidereal_mode
-            else:
-                sidereal_mode_to_pass = sidereal_mode
-
-            k_subject = AstrologicalSubject(
-                name or default_name, year, month, day, hour, minute,
-                latitude, longitude, tz_str,
-                house_system=house_system_code,
-                zodiac_type=zodiac_type,
-                ayanamsa_mode=sidereal_mode_to_pass
-            )
-        else: # Tropic
-            k_subject = AstrologicalSubject(
-                name or default_name, year, month, day, hour, minute,
-                latitude, longitude, tz_str,
-                house_system=house_system_code,
-                zodiac_type=zodiac_type
-                # ayanamsa_mode should not be passed for Tropic
-            )
 
         if not k_subject:
             raise ValueError("Failed to create AstrologicalSubject instance (K4 style).")
