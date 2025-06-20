@@ -360,7 +360,7 @@ async def calculate_lunar_return_data(
         raise ValueError(f"Invalid search_start_date format: {search_start_date_str}. Expected YYYY-MM-DD. Error: {ve}")
 
     precise_lr_dt_obj: Optional[datetime] = None
-    lr_chart_details: Optional[LunarReturnChartDetails] = None
+    lr_chart_details: Optional[LunarReturnChartDetails] = None # Ensure initialized
     highlights: List[str] = []
     lr_subject_instance: Optional[AstrologicalSubject] = None
 
@@ -396,9 +396,17 @@ async def calculate_lunar_return_data(
                     precise_lr_dt_obj = local_lr_dt.replace(tzinfo=pytz.utc) # Simplified
 
             lr_subject_instance = lr_event_subject
-            lr_subject_instance.name = f"Retorno Lunar {precise_lr_dt_obj.year}-{precise_lr_dt_obj.month}"
-            highlights.append(f"Retorno Lunar calculado com Kerykeion v4 para {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
-            print(f"K4 LunarReturn success. Date (UTC): {precise_lr_dt_obj}")
+            if precise_lr_dt_obj: # Check if datetime extraction was successful
+                 lr_subject_instance.name = f"Retorno Lunar {precise_lr_dt_obj.year}-{precise_lr_dt_obj.month}"
+                 highlights.append(f"Retorno Lunar calculado com Kerykeion v4 para {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
+                 print(f"K4 LunarReturn success. Date (UTC): {precise_lr_dt_obj}")
+            else:
+                # This case implies precise_lr_dt_obj might not have been set (e.g. deep error in timezone conversion)
+                # Setting to None ensures fallback logic is triggered.
+                print(f"K4 LunarReturn: precise_lr_dt_obj not determined from lr_event_subject. Timezone: {event_tz_str}. Fallback.")
+                precise_lr_dt_obj = None
+                lr_subject_instance = None
+                # No specific highlight here, will be caught by the general fallback highlight.
 
         except Exception as e_k4_lr:
             print(f"K4 LunarReturn error: {type(e_k4_lr).__name__} - {e_k4_lr}. Fallback.")
@@ -488,13 +496,9 @@ async def calculate_lunar_return_data(
         if lr_subject_instance.ascendant: highlights.append(f"Ascendente do Retorno Lunar: {lr_subject_instance.ascendant.sign}")
         if lr_subject_instance.moon: highlights.append(f"Lua do Retorno Lunar em: {lr_subject_instance.moon.sign} na casa {lr_subject_instance.moon.house_name}")
 
-    except NotImplementedError:
-            highlights.append("Cálculo preciso do Retorno Lunar com Kerykeion v5 ainda não implementado.")
-        except Exception as e_k5_lr: # Corrected indentation for except block
-            print(f"Erro ao calcular Retorno Lunar com Kerykeion v5 (ou mock): {str(e_k5_lr)}")
-            highlights.append(f"Não foi possível calcular o Retorno Lunar preciso: {str(e_k5_lr)}")
-    else: # Corresponds to 'if KERYKEION_LUNAR_RETURN_AVAILABLE and LunarReturn:'
-        highlights.append("Funcionalidade de Retorno Lunar não disponível (Kerykeion v5 módulo não encontrado).")
+    # The following block containing the misaligned 'except NotImplementedError' and 'else'
+    # was the source of the SyntaxError and is removed as per the subtask focusing on K4 compatibility.
+    # Its K5-related logic is not part of the current K4 fix.
 
     if not precise_lr_dt_obj: # Fallback if everything failed
         mock_date = datetime.strptime(search_start_date_str, "%Y-%m-%d") + timedelta(days=28)
