@@ -65,24 +65,27 @@ async def get_composite_chart(request: CompositeChartRequest):
             # would need to be applied to the `composite_subject` after creation if it's a plain AstrologicalSubject
             # that needs these for house calculation by KerykeionChartSVG, or if the factory itself takes them.
             # This part might need further refinement based on actual K4 CompositeSubjectFactory behavior.
-            composite_subject = factory.get_davison_composite_subject_model(
-                lat=settings.location.latitude,
-                lon=settings.location.longitude,
-                tz_str=settings.location.tz_str
-                # house_system_code = HOUSE_SYSTEM_MAP.get(settings.house_system.lower(), "P")
-                # If the factory method supports house_system, it should be passed.
-            )
+            composite_subject = factory.get_davison_composite_subject_model()
             if composite_subject:
-                 composite_subject.name = f"Composto Davison {request.person1_natal_data.name or 'P1'} & {request.person2_natal_data.name or 'P2'}"
+                composite_subject.name = f"Composto Davison {request.person1_natal_data.name or 'P1'} & {request.person2_natal_data.name or 'P2'}"
+                # Set location and house system attributes on the composite_subject
+                composite_subject.lat = settings.location.latitude
+                composite_subject.lon = settings.location.longitude # Kerykeion standard is 'lon'
+                composite_subject.tz_str = settings.location.tz_str
+
+                house_system_code = HOUSE_SYSTEM_MAP.get(settings.house_system.lower(), "P")
+                composite_subject.house_system_code = house_system_code
         else: # Default to midpoint
-            composite_subject = factory.get_midpoint_composite_subject_model(
-                lat=settings.location.latitude,
-                lon=settings.location.longitude,
-                tz_str=settings.location.tz_str
-                # house_system_code = HOUSE_SYSTEM_MAP.get(settings.house_system.lower(), "P")
-            )
-            if composite_subject:
+            composite_subject = factory.get_midpoint_composite_subject_model()
+            if composite_subject: # This was for midpoint, apply same changes as Davison
                 composite_subject.name = f"Composto Midpoint {request.person1_natal_data.name or 'P1'} & {request.person2_natal_data.name or 'P2'}"
+                # Set location and house system attributes on the composite_subject
+                composite_subject.lat = settings.location.latitude
+                composite_subject.lon = settings.location.longitude # Kerykeion standard is 'lon'
+                composite_subject.tz_str = settings.location.tz_str
+
+                house_system_code = HOUSE_SYSTEM_MAP.get(settings.house_system.lower(), "P")
+                composite_subject.house_system_code = house_system_code
 
         if not composite_subject:
             raise HTTPException(status_code=500, detail="Falha ao gerar o modelo de mapa composto pela Kerykeion (v4 factory).")
