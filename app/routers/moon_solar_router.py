@@ -360,25 +360,22 @@ async def calculate_lunar_return_data(
         raise ValueError(f"Invalid search_start_date format: {search_start_date_str}. Expected YYYY-MM-DD. Error: {ve}")
 
     precise_lr_dt_obj: Optional[datetime] = None
-    lr_chart_details: Optional[LunarReturnChartDetails] = None
+    lr_chart_details: Optional[LunarReturnChartDetails] = None # Initialized
     highlights: List[str] = []
     lr_subject_instance: Optional[AstrologicalSubject] = None
 
     if KERYKEION_LUNAR_RETURN_AVAILABLE and LunarReturn:
         try:
-            print(f"Attempting K4 LunarReturn with natal subject: {natal_subject.name} and search_start_dt: {search_start_dt}")
-            # Kerykeion v4 constructor: LunarReturn(kerykeion_subject, search_start_datetime_object)
-            # The LunarReturn object itself is the astrological subject for the return moment.
+            # Attempt Kerykeion v5 (conceptually) Lunar Return calculation
+            # This logic was previously labeled as K4
+            print(f"Attempting Kerykeion LunarReturn with natal subject: {natal_subject.name} and search_start_dt: {search_start_dt}")
             lr_event_subject = LunarReturn(natal_subject, search_start_dt)
 
-            # Extract precise datetime from lr_event_subject's attributes (year, month, day, hour, minute)
-            # and convert to aware UTC datetime. The subject's tz_str should be from the natal location.
-            event_tz_str = getattr(lr_event_subject, 'tz_str', 'UTC') # Default to UTC
+            event_tz_str = getattr(lr_event_subject, 'tz_str', 'UTC')
             local_lr_dt = datetime(
                 lr_event_subject.year, lr_event_subject.month, lr_event_subject.day,
                 lr_event_subject.hour, lr_event_subject.minute
             )
-
             try:
                 event_timezone = pytz.timezone(event_tz_str)
                 aware_local_lr_dt = event_timezone.localize(local_lr_dt)
@@ -388,39 +385,54 @@ async def calculate_lunar_return_data(
                     if event_tz_str.upper() == "UTC":
                         precise_lr_dt_obj = datetime(lr_event_subject.year, lr_event_subject.month, lr_event_subject.day,
                                                        lr_event_subject.hour, lr_event_subject.minute, tzinfo=pytz.utc)
-                    else: # Offset like "+03:00", needs robust parsing. For now, treat as naive then UTC.
+                    else:
                         print(f"Warning: Timezone '{event_tz_str}' requires offset parsing. Treating as naive then UTC.")
-                        precise_lr_dt_obj = local_lr_dt.replace(tzinfo=pytz.utc) # Simplified
+                        precise_lr_dt_obj = local_lr_dt.replace(tzinfo=pytz.utc)
                 else:
                     print(f"Error: Unknown timezone format '{event_tz_str}'. Defaulting to naive datetime then UTC.")
-                    precise_lr_dt_obj = local_lr_dt.replace(tzinfo=pytz.utc) # Simplified
+                    precise_lr_dt_obj = local_lr_dt.replace(tzinfo=pytz.utc)
 
             lr_subject_instance = lr_event_subject
-            lr_subject_instance.name = f"Retorno Lunar {precise_lr_dt_obj.year}-{precise_lr_dt_obj.month}"
-            highlights.append(f"Retorno Lunar calculado com Kerykeion v4 para {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
-            print(f"K4 LunarReturn success. Date (UTC): {precise_lr_dt_obj}")
+            # Ensure precise_lr_dt_obj is set before using it for naming
+            if precise_lr_dt_obj:
+                 lr_subject_instance.name = f"Retorno Lunar {precise_lr_dt_obj.year}-{precise_lr_dt_obj.month}"
+            else:
+                # Fallback name if precise_lr_dt_obj wasn't set (should be rare if logic above is correct)
+                lr_subject_instance.name = f"Retorno Lunar (Data Incompleta)"
 
-        except Exception as e_k4_lr:
-            print(f"K4 LunarReturn error: {type(e_k4_lr).__name__} - {e_k4_lr}. Fallback.")
-            # Ensure these are None so fallback is triggered
+
+        except NotImplementedError:
+            highlights.append("Cálculo preciso do Retorno Lunar com Kerykeion v5 ainda não implementado.")
             precise_lr_dt_obj = None
             lr_subject_instance = None
-            highlights.append(f"Não foi possível calcular o Retorno Lunar preciso com Kerykeion v4: {e_k4_lr}. Usando estimativa.")
-    else:
+        except Exception as e_k5_lr: # Changed from e_k4_lr for consistency with K5 context
+            print(f"Kerykeion LunarReturn error: {type(e_k5_lr).__name__} - {e_k5_lr}. Fallback.")
+            highlights.append(f"Não foi possível calcular o Retorno Lunar preciso com Kerykeion: {e_k5_lr}. Usando estimativa.")
+            precise_lr_dt_obj = None
+            lr_subject_instance = None
+        else:
+            # This block executes if the Kerykeion calculation try was successful
+            if precise_lr_dt_obj and lr_subject_instance:
+                highlights.append(f"Retorno Lunar calculado com Kerykeion para {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
+                print(f"Kerykeion LunarReturn success. Date (UTC): {precise_lr_dt_obj}")
+            else:
+                # This case implies the try block succeeded but didn't set the objects as expected.
+                highlights.append("Processamento do Retorno Lunar com Kerykeion concluído, mas resultado incompleto. Usando estimativa.")
+                precise_lr_dt_obj = None # Ensure fallback
+                lr_subject_instance = None
+
+    else: # This 'else' is for 'if KERYKEION_LUNAR_RETURN_AVAILABLE and LunarReturn:'
         highlights.append("Módulo Kerykeion LunarReturn não disponível ou não importado. Usando estimativa.")
-        # Ensure these are None so fallback is triggered
         precise_lr_dt_obj = None
         lr_subject_instance = None
 
-    # Fallback logic if K4 LunarReturn failed or not available
+    # Fallback logic if Kerykeion LunarReturn was not available, failed, or not implemented
     if not lr_subject_instance or not precise_lr_dt_obj:
         print("Executing fallback logic for Lunar Return.")
-        # Approximate LR date: search_start_date + ~28 days, using natal time, at natal location.
-        # Convert to UTC.
         approx_lr_local_dt = datetime(
-            search_start_dt.year, search_start_dt.month, search_start_dt.day, # Use search_start_dt as base
+            search_start_dt.year, search_start_dt.month, search_start_dt.day,
             natal_request_data.hour, natal_request_data.minute
-        ) + timedelta(days=28) # Average lunar month approximation
+        ) + timedelta(days=28)
 
         try:
             natal_timezone = pytz.timezone(natal_request_data.tz_str)
@@ -428,16 +440,19 @@ async def calculate_lunar_return_data(
             precise_lr_dt_obj = aware_approx_lr_local_dt.astimezone(pytz.utc)
         except Exception as e_tz:
             print(f"Error creating fallback LR datetime with natal timezone: {e_tz}. Using naive UTC from approximation.")
-            precise_lr_dt_obj = approx_lr_local_dt.replace(tzinfo=pytz.utc) # Make it timezone aware (UTC)
+            precise_lr_dt_obj = approx_lr_local_dt.replace(tzinfo=pytz.utc)
 
-        highlights.append(f"Data do Retorno Lunar é uma estimativa: {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
+        # Append only if no Kerykeion specific message about failure was added, or always add if it's a distinct step
+        if not any("Usando estimativa" in h for h in highlights) and not any("não implementado" in h for h in highlights) :
+             highlights.append(f"Data do Retorno Lunar é uma estimativa: {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
+
 
         lr_chart_request_fallback = NatalChartRequest(
             name=f"Retorno Lunar {precise_lr_dt_obj.year}-{precise_lr_dt_obj.month} (Aprox.)",
             year=precise_lr_dt_obj.year, month=precise_lr_dt_obj.month, day=precise_lr_dt_obj.day,
             hour=precise_lr_dt_obj.hour, minute=precise_lr_dt_obj.minute,
             latitude=natal_request_data.latitude, longitude=natal_request_data.longitude,
-            tz_str="UTC", # Subject created with UTC time
+            tz_str="UTC",
             house_system=natal_request_data.house_system,
             zodiac_type=natal_request_data.zodiac_type,
             sidereal_mode=natal_request_data.sidereal_mode,
@@ -447,8 +462,8 @@ async def calculate_lunar_return_data(
         if lr_subject_instance:
             lr_subject_instance.name = f"Retorno Lunar {precise_lr_dt_obj.year}-{precise_lr_dt_obj.month} (Aprox.)"
 
-
-    if lr_subject_instance and precise_lr_dt_obj: # Proceed only if we have a subject and a datetime
+    # Populate chart details IF lr_subject_instance exists (either from Kerykeion success or fallback)
+    if lr_subject_instance and precise_lr_dt_obj:
         planets_lr_dict: Dict[str, PlanetData] = {}
         for k_name, api_name in PLANETS_MAP.items():
             planet_pos_data = get_planet_data(lr_subject_instance, k_name, api_name)
@@ -469,7 +484,7 @@ async def calculate_lunar_return_data(
         for p1_k_name in lr_subject_instance.planets_list:
             p1_obj = getattr(lr_subject_instance, p1_k_name.lower())
             if hasattr(p1_obj, 'aspects'):
-                for asp in p1_obj.aspects: # These are aspects to other planets in the same chart
+                for asp in p1_obj.aspects:
                     aspects_lr_list.append(AspectData(
                         planet1=p1_obj.name, planet2=asp.p2_name, aspect=asp.aspect_name, orb=round(asp.orbit,2)
                     ))
@@ -484,17 +499,16 @@ async def calculate_lunar_return_data(
             house_system=str(lr_subject_instance.houses_system_name),
             zodiac_type=str(lr_subject_instance.zodiac_type)
         )
-        highlights.append(f"Retorno Lunar (simulado) para {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S')} UTC.")
+        # Removed the (simulado) part as this could be from actual calculation now
+        highlights.append(f"Dados do mapa de Retorno Lunar para {precise_lr_dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z')} processados.")
         if lr_subject_instance.ascendant: highlights.append(f"Ascendente do Retorno Lunar: {lr_subject_instance.ascendant.sign}")
         if lr_subject_instance.moon: highlights.append(f"Lua do Retorno Lunar em: {lr_subject_instance.moon.sign} na casa {lr_subject_instance.moon.house_name}")
+        # The K5-specific try...except...else block previously here (around line 490-505) is now removed from this location.
+    else:
+        # If, after all attempts, we still don't have a subject
+        if not any("Retorno Lunar" in h for h in highlights): # Avoid adding generic message if specific ones exist
+            highlights.append("Não foi possível gerar dados detalhados do Retorno Lunar.")
 
-    except NotImplementedError:
-            highlights.append("Cálculo preciso do Retorno Lunar com Kerykeion v5 ainda não implementado.")
-        except Exception as e_k5_lr: # Corrected indentation for except block
-            print(f"Erro ao calcular Retorno Lunar com Kerykeion v5 (ou mock): {str(e_k5_lr)}")
-            highlights.append(f"Não foi possível calcular o Retorno Lunar preciso: {str(e_k5_lr)}")
-    else: # Corresponds to 'if KERYKEION_LUNAR_RETURN_AVAILABLE and LunarReturn:'
-        highlights.append("Funcionalidade de Retorno Lunar não disponível (Kerykeion v5 módulo não encontrado).")
 
     if not precise_lr_dt_obj: # Fallback if everything failed
         mock_date = datetime.strptime(search_start_date_str, "%Y-%m-%d") + timedelta(days=28)

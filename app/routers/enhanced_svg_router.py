@@ -19,7 +19,7 @@ import base64
 import os
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional, Literal
+from typing import Dict, List, Optional, Literal, Any
 
 router = APIRouter(prefix="/api/v2", tags=["enhanced_svg_charts"], dependencies=[Depends(verify_api_key)])
 
@@ -124,7 +124,6 @@ async def generate_enhanced_svg_chart(
             # or if houses are handled differently. For now, no specific overrides.
             pass
 
-        svg_content = generator.generate_enhanced_svg(
         svg_content = generator.generate_enhanced_svg(
             chart_type=enhanced_chart_type,
             theme=theme,
@@ -297,7 +296,7 @@ async def generate_enhanced_svg_chart_base64(
         )
 
 @router.post("/svg_chart_info",
-             response_model=Dict[str, any],
+             response_model=Dict[str, Any],
              summary="Informações do chart que será gerado",
              description="Retorna informações detalhadas sobre o chart que será gerado com os dados fornecidos.")
 async def get_svg_chart_info(data: SVGChartRequest):
@@ -353,7 +352,7 @@ async def get_svg_chart_info(data: SVGChartRequest):
         )
 
 @router.get("/themes",
-           response_model=Dict[str, any],
+           response_model=Dict[str, Any],
            summary="Temas disponíveis",
            description="Lista todos os temas disponíveis para os charts SVG.")
 async def get_available_themes():
@@ -390,7 +389,7 @@ async def get_available_themes():
         )
 
 @router.get("/chart_types",
-           response_model=Dict[str, any], 
+           response_model=Dict[str, Any],
            summary="Tipos de chart disponíveis",
            description="Lista todos os tipos de chart disponíveis e suas configurações.")
 async def get_available_chart_types():
