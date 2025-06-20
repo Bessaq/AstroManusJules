@@ -1,17 +1,17 @@
 ## [Unreleased] - YYYY-MM-DD
 
 ### Fixed
-- Resolved Kerykeion v5.0.0a5 compatibility issues impacting several endpoints.
-- Corrected `AstrologicalSubject` creation by speculatively attempting new Kerykeion v5 factory methods (`.natal()`, `.transit()`) with a fallback to direct constructor, improving stability with Kerykeion v5.0.0a5.
+- Updated the project to target **Kerykeion v4.26.0**, removing references to the experimental v5 API and ensuring all endpoints operate with the stable release.
+- Corrected `AstrologicalSubject` creation to use the 4.x constructor parameters, eliminating the previous speculative v5 factory logic.
 - Fixed errors in location field handling for `/api/v1/natal_chart` by:
   - Integrating a configurable `GEONAMES_USERNAME` from environment variables.
   - Intelligently setting Kerykeion's `online` flag to `False` when full lat/lon/tz_str are provided, preventing unnecessary GeoNames calls.
 - Addressed field configuration problems in `/api/v1/synastry` by refactoring to use Kerykeion's `SynastryAspects` class (with a fallback to improved manual calculation) for more robust aspect determination.
-- Fixed `/api/v2/svg_chart` incompatibilities with Kerykeion v5 by ensuring `EnhancedSVGGenerator` uses more robust methods for retrieving SVG strings from `KerykeionChartSVG` and correctly handles different chart types with v5 subjects.
+- Fixed `/api/v2/svg_chart` incompatibilities with Kerykeion 4.x by ensuring `EnhancedSVGGenerator` uses robust methods for retrieving SVG strings from `KerykeionChartSVG` and correctly handles different chart types.
 - Resolved an internal server error for `/api/v2/themes` by accessing `THEME_CONFIGURATIONS` as a class attribute in `EnhancedSVGGenerator`, avoiding problematic instantiation.
 
 ### Changed
-- `app/utils/astro_helpers.py`: Major updates to `create_subject` for Kerykeion v5 compatibility and GeoNames username.
+- `app/utils/astro_helpers.py`: Major updates to `create_subject` for Kerykeion 4.26 compatibility and GeoNames username.
 - `app/routers/synastry_router.py`: Refactored to use `SynastryAspects`.
 - `app/svg/enhanced_svg_generator.py`: Improved SVG string retrieval from `KerykeionChartSVG`.
 - `app/routers/enhanced_svg_router.py`: Corrected `/themes` endpoint logic.

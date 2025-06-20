@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-This project provides a comprehensive FastAPI-based API for astrological calculations. It leverages the Kerykeion library (v5.0.0a5) to offer a range of services, including natal chart data, transit information, synastry analysis, composite charts, solar/lunar returns, and enhanced SVG chart generation. The API is designed with a data-driven approach, making it suitable for integration into various applications, including those using AI and LLMs.
+This project provides a comprehensive FastAPI-based API for astrological calculations. It leverages the Kerykeion library (v4.26.0) to offer a range of services, including natal chart data, transit information, synastry analysis, composite charts, solar/lunar returns, and enhanced SVG chart generation. The API is designed with a data-driven approach, making it suitable for integration into various applications, including those using AI and LLMs.
 
 ## 2. Features
 
@@ -241,7 +241,7 @@ The API provides several endpoints for various astrological calculations and cha
 *   **Endpoint:** `POST /api/v1/lunar_return`
 *   **Description:** Calculates the next Lunar Return date/time and full chart data for that moment.
 *   **Request Body (`LunarReturnRequest`):** Contains `natal_data` and `search_start_date` (YYYY-MM-DD).
-*   **Response (200 OK - `LunarReturnResponse`):** Contains `precise_lunar_return_datetime_utc`, `lunar_return_chart_details` (full chart data), and `highlights`. (Note: Kerykeion v5 integration for exact calculation is speculative).
+*   **Response (200 OK - `LunarReturnResponse`):** Contains `precise_lunar_return_datetime_utc`, `lunar_return_chart_details` (full chart data), and `highlights`. (Compatible with Kerykeion 4.26.)
 
 #### 4.5.3 Moon Phase
 *   **Endpoint:** `POST /api/v1/moon_phase`
@@ -325,7 +325,7 @@ These endpoints generate high-quality SVG charts.
 ## 5. Kerykeion Library & Development Notes
 
 ### 5.1 Kerykeion Version
-This project currently uses **Kerykeion v5.0.0a5**. As this is an alpha version, some of its newer features (especially those related to specific factories or modules like Planetary Returns) are integrated speculatively based on available information. Full behavior and API stability of these alpha features will become clearer with further testing and official Kerykeion v5 documentation. The core astrological calculations provided by Kerykeion are expected to be highly accurate, building upon the Swiss Ephemeris.
+This project currently uses **Kerykeion v4.26.0**. Earlier versions of this repository targeted the experimental 5.x series, but the code base has been aligned with the stable 4.x API. Any references to alpha features have been removed and all endpoints operate using the officially released functionality of Kerykeion 4.26.
 
 ### 5.2 Data-Driven Approach
 A key design philosophy of this API, inherited from Kerykeion, is its data-driven approach. Most endpoints provide rich JSON responses containing detailed astrological data (e.g., planet positions, signs, elements, qualities, aspects, house cusps). This structured data is ideal for integration into other applications, data analysis pipelines, or for use with AI/LLM systems.
